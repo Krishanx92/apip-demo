@@ -80,7 +80,7 @@ func main() {
 	mux.HandleFunc("GET /reports/leave-utilization", leaveUtilizationReport)
 
 	handler := withOptionalContext("/leave-management/v1.0", withJSONHeaders(mux))
-	addr := ":8080"
+	addr := ":8084"
 
 	log.Printf("leave-management backend listening on %s", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
