@@ -8,7 +8,7 @@ spec:
   context: /leave-management/$version
   upstream:
     main:
-      url: https://210ed30d-7e4c-40fa-9bf2-1d8389724908-dev.e1-us-east-azure.choreoapis.dev/dwlo/backend/v1.0/leave-types
+      url: https://210ed30d-7e4c-40fa-9bf2-1d8389724908-prod.e1-us-east-azure.choreoapis.dev/dwlo/backend/v1.0
   policies:
     - name: set-headers
       version: v1
