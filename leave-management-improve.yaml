@@ -1,0 +1,733 @@
+openapi: "3.0.3"
+info:
+  title: Leave Management API
+  version: v1.0
+  description: API for employees and managers to request leave, review balances, approve or reject requests, and track leave policy utilization across teams.
+  contact:
+    name: HR Platform Team
+    email: hr-platform@company.com
+
+servers:
+  - url: https://api.company.com/leave-management/v1.0
+    description: Production API
+
+tags:
+  - name: Leave Approvals
+    description: Manager workflows for approving and rejecting leave requests.
+  - name: Leave Balances
+    description: Employee leave entitlement and remaining balance details.
+  - name: Leave Policies
+    description: Organization-defined leave types and yearly allowance policies.
+  - name: Leave Requests
+    description: Employee leave request lifecycle from creation to cancellation.
+  - name: Reports
+    description: Team and organization leave metrics for operational monitoring.
+
+paths:
+  /leave-types:
+    get:
+      tags:
+        - Leave Policies
+      summary: List active leave types
+      description: Returns all leave types configured for the organization, including annual quota and carry-forward settings. Agents should call this before creating leave requests to validate leave type codes.
+      operationId: listLeaveTypes
+      responses:
+        '200':
+          description: Leave types retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveTypeListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /employees/{employeeId}/leave-balances:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    get:
+      tags:
+        - Leave Balances
+      summary: List employee leave balances
+      description: Returns leave balances grouped by leave type for the requested employee. Agents use this to verify remaining days before submitting requests.
+      operationId: listEmployeeLeaveBalances
+      responses:
+        '200':
+          description: Leave balances retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveBalanceListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /employees/{employeeId}/leave-requests:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+    get:
+      tags:
+        - Leave Requests
+      summary: List employee leave requests
+      description: Returns leave requests for a single employee with optional status and date filters. Agents should paginate through this endpoint to build employee leave history views.
+      operationId: listEmployeeLeaveRequests
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: status
+          in: query
+          description: Filter by request status.
+          schema:
+            $ref: '#/components/schemas/LeaveStatus'
+        - name: fromDate
+          in: query
+          description: Filter requests where start date is on or after this date.
+          schema:
+            type: string
+            format: date
+            example: '2026-06-01'
+        - name: toDate
+          in: query
+          description: Filter requests where end date is on or before this date.
+          schema:
+            type: string
+            format: date
+            example: '2026-12-31'
+      responses:
+        '200':
+          description: Leave requests retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequestListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+    post:
+      tags:
+        - Leave Requests
+      summary: Create employee leave request
+      description: Creates a new leave request in pending status for the target employee. Agents should call this after verifying leave type and available balance.
+      operationId: createEmployeeLeaveRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeaveRequest'
+            example:
+              leaveTypeCode: annual
+              startDate: '2026-06-10'
+              endDate: '2026-06-14'
+              reason: Family event
+              halfDay: false
+      responses:
+        '201':
+          description: Leave request created
+          headers:
+            Location:
+              description: URI of the newly created leave request.
+              schema:
+                type: string
+                example: /leave-management/v1.0/employees/4e7c0bda-b2b0-45f4-b97f-58b130fdd0f6/leave-requests/8e42dddb-6639-45dd-bcca-54032e172539
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /employees/{employeeId}/leave-requests/{requestId}:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+      - $ref: '#/components/parameters/RequestId'
+    get:
+      tags:
+        - Leave Requests
+      summary: Get employee leave request
+      description: Returns details for a specific leave request including approver context and decision metadata. Agents can use this endpoint to poll request status after submission.
+      operationId: getEmployeeLeaveRequestById
+      responses:
+        '200':
+          description: Leave request retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /employees/{employeeId}/leave-requests/{requestId}/cancellation:
+    parameters:
+      - $ref: '#/components/parameters/EmployeeId'
+      - $ref: '#/components/parameters/RequestId'
+    post:
+      tags:
+        - Leave Requests
+      summary: Cancel employee leave request
+      description: Cancels a pending leave request initiated by the employee. Agents should only call this endpoint when the request is still in pending status.
+      operationId: cancelEmployeeLeaveRequest
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelLeaveRequest'
+            example:
+              reason: Plan changed
+      responses:
+        '200':
+          description: Leave request cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /leave-requests/{requestId}/approval:
+    parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/IfMatch'
+    post:
+      tags:
+        - Leave Approvals
+      summary: Approve or reject leave request
+      description: Allows a manager to approve or reject a pending leave request and provide an optional comment. Agents should include the current entity tag in If-Match to avoid conflicting updates.
+      operationId: decideLeaveRequestApproval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveApprovalDecision'
+            example:
+              decision: approved
+              managerComment: Approved. Please update handover notes.
+      responses:
+        '200':
+          description: Leave request decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '412':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /managers/{managerId}/team-leave-requests:
+    parameters:
+      - $ref: '#/components/parameters/ManagerId'
+    get:
+      tags:
+        - Leave Approvals
+      summary: List team leave requests
+      description: Returns leave requests requiring attention from a manager's reporting team. Agents can filter by status to build pending approval queues.
+      operationId: listManagerTeamLeaveRequests
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: status
+          in: query
+          description: Filter by request status.
+          schema:
+            $ref: '#/components/schemas/LeaveStatus'
+      responses:
+        '200':
+          description: Team leave requests retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequestListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/leave-utilization:
+    get:
+      tags:
+        - Reports
+      summary: Get leave utilization report
+      description: Returns aggregated leave utilization metrics for a time period and department scope. Agents should use this endpoint for dashboards rather than iterating over all requests.
+      operationId: getLeaveUtilizationReport
+      parameters:
+        - name: year
+          in: query
+          required: true
+          description: Calendar year used for utilization reporting.
+          schema:
+            type: integer
+            minimum: 2000
+            maximum: 2100
+            example: 2026
+        - name: departmentId
+          in: query
+          description: Optional department filter for scoped reporting.
+          schema:
+            type: string
+            format: uuid
+            example: b2ad5f43-6dc4-4478-b842-ad97fbe3a745
+      responses:
+        '200':
+          description: Utilization report retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveUtilizationReport'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    EmployeeId:
+      name: employeeId
+      in: path
+      required: true
+      description: Unique identifier for an employee.
+      schema:
+        type: string
+        format: uuid
+        example: 4e7c0bda-b2b0-45f4-b97f-58b130fdd0f6
+    ManagerId:
+      name: managerId
+      in: path
+      required: true
+      description: Unique identifier for a manager.
+      schema:
+        type: string
+        format: uuid
+        example: 0386fece-3f75-43d8-8f7c-a9762469f631
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      description: Unique identifier for a leave request.
+      schema:
+        type: string
+        format: uuid
+        example: 8e42dddb-6639-45dd-bcca-54032e172539
+    Limit:
+      name: limit
+      in: query
+      description: Maximum number of records to return.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        example: 20
+    Offset:
+      name: offset
+      in: query
+      description: Number of records to skip before collecting the result set.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+        example: 0
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Current ETag of the leave request for optimistic concurrency control.
+      schema:
+        type: string
+        example: W/"7"
+
+  responses:
+    ErrorResponse:
+      description: Standard error response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 40001
+            message: Invalid request payload
+            description: endDate must be on or after startDate.
+            moreInfo: https://docs.company.com/errors/40001
+    TooManyRequestsResponse:
+      description: Too many requests; client must retry later.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            example: 30
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 42900
+            message: Rate limit exceeded
+            description: Too many API requests in a short period.
+            moreInfo: https://docs.company.com/errors/42900
+
+  schemas:
+    LeaveStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+        - cancelled
+
+    LeaveType:
+      type: object
+      required:
+        - code
+        - name
+        - annualQuotaDays
+        - carryForwardEnabled
+      properties:
+        code:
+          type: string
+          example: annual
+        name:
+          type: string
+          example: Annual Leave
+        annualQuotaDays:
+          type: number
+          format: float
+          example: 18
+        carryForwardEnabled:
+          type: boolean
+          example: true
+
+    LeaveBalance:
+      type: object
+      required:
+        - leaveTypeCode
+        - accruedDays
+        - usedDays
+        - remainingDays
+      properties:
+        leaveTypeCode:
+          type: string
+          example: annual
+        accruedDays:
+          type: number
+          format: float
+          example: 18
+        usedDays:
+          type: number
+          format: float
+          example: 5
+        remainingDays:
+          type: number
+          format: float
+          example: 13
+
+    LeaveRequest:
+      type: object
+      required:
+        - id
+        - employeeId
+        - leaveTypeCode
+        - startDate
+        - endDate
+        - requestedDays
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 8e42dddb-6639-45dd-bcca-54032e172539
+        employeeId:
+          type: string
+          format: uuid
+          example: 4e7c0bda-b2b0-45f4-b97f-58b130fdd0f6
+        leaveTypeCode:
+          type: string
+          example: annual
+        startDate:
+          type: string
+          format: date
+          example: '2026-06-10'
+        endDate:
+          type: string
+          format: date
+          example: '2026-06-14'
+        requestedDays:
+          type: number
+          format: float
+          example: 5
+        reason:
+          type: string
+          maxLength: 500
+          example: Family event
+        halfDay:
+          type: boolean
+          example: false
+        status:
+          $ref: '#/components/schemas/LeaveStatus'
+        managerComment:
+          type: string
+          maxLength: 500
+          example: Approved. Please update handover notes.
+        decisionAt:
+          type: string
+          format: date-time
+          example: '2026-05-04T10:45:00Z'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-05-01T09:20:00Z'
+
+    CreateLeaveRequest:
+      type: object
+      required:
+        - leaveTypeCode
+        - startDate
+        - endDate
+      properties:
+        leaveTypeCode:
+          type: string
+          example: annual
+        startDate:
+          type: string
+          format: date
+          example: '2026-06-10'
+        endDate:
+          type: string
+          format: date
+          example: '2026-06-14'
+        reason:
+          type: string
+          maxLength: 500
+          example: Family event
+        halfDay:
+          type: boolean
+          default: false
+          example: false
+
+    CancelLeaveRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          example: Travel plan changed
+
+    LeaveApprovalDecision:
+      type: object
+      required:
+        - decision
+      properties:
+        decision:
+          type: string
+          enum:
+            - approved
+            - rejected
+        managerComment:
+          type: string
+          maxLength: 500
+          example: Rejected due to overlapping critical sprint tasks.
+
+    CollectionPage:
+      type: object
+      required:
+        - count
+        - data
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          example: 2
+        next:
+          type: string
+          nullable: true
+          example: /leave-management/v1.0/employees/4e7c0bda-b2b0-45f4-b97f-58b130fdd0f6/leave-requests?limit=20&offset=20
+        previous:
+          type: string
+          nullable: true
+          example: null
+
+    LeaveTypeListResponse:
+      allOf:
+        - $ref: '#/components/schemas/CollectionPage'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/LeaveType'
+
+    LeaveBalanceListResponse:
+      allOf:
+        - $ref: '#/components/schemas/CollectionPage'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/LeaveBalance'
+
+    LeaveRequestListResponse:
+      allOf:
+        - $ref: '#/components/schemas/CollectionPage'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/LeaveRequest'
+
+    LeaveUtilizationReport:
+      type: object
+      required:
+        - year
+        - totalRequestedDays
+        - totalApprovedDays
+        - byLeaveType
+      properties:
+        year:
+          type: integer
+          example: 2026
+        totalRequestedDays:
+          type: number
+          format: float
+          example: 1240.5
+        totalApprovedDays:
+          type: number
+          format: float
+          example: 1096.0
+        byLeaveType:
+          type: array
+          items:
+            type: object
+            required:
+              - leaveTypeCode
+              - requestedDays
+              - approvedDays
+            properties:
+              leaveTypeCode:
+                type: string
+                example: annual
+              requestedDays:
+                type: number
+                format: float
+                example: 820.0
+              approvedDays:
+                type: number
+                format: float
+                example: 740.5
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          example: 40001
+        message:
+          type: string
+          example: Invalid request payload
+        description:
+          type: string
+          example: endDate must be on or after startDate.
+        moreInfo:
+          type: string
+          format: uri
+          example: https://docs.company.com/errors/40001
+
+security:
+  - bearerAuth: []

@@ -8,7 +8,7 @@ spec:
   context: /leave-management/$version
   upstream:
     main:
-      url: https://mocki.io/v1/c149d69a-78b7-4251-9661-339c802e7c49
+      url: http://host.docker.internal:8088
   policies:
     - name: set-headers
       version: v1
@@ -17,6 +17,10 @@ spec:
           headers:
             - name: x-wso2-apip-gateway-version
               value: v1.0.0
+        response:
+          headers:
+            - name: x-environment
+              value: development
   operations:
     - method: GET
       path: /leave-types
