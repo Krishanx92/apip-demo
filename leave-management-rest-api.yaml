@@ -1,0 +1,38 @@
+apiVersion: gateway.api-platform.wso2.com/v1alpha1
+kind: RestApi
+metadata:
+  name: leave-management-api-v1.0
+spec:
+  displayName: Leave-Management-API
+  version: v1.0
+  context: /leave-management/$version
+  upstream:
+    main:
+      url: https://mocki.io/v1/c149d69a-78b7-4251-9661-339c802e7c49
+  policies:
+    - name: set-headers
+      version: v1
+      params:
+        request:
+          headers:
+            - name: x-wso2-apip-gateway-version
+              value: v1.0.0
+  operations:
+    - method: GET
+      path: /leave-types
+    - method: GET
+      path: /employees/{employeeId}/leave-balances
+    - method: GET
+      path: /employees/{employeeId}/leave-requests
+    - method: POST
+      path: /employees/{employeeId}/leave-requests
+    - method: GET
+      path: /employees/{employeeId}/leave-requests/{requestId}
+    - method: POST
+      path: /employees/{employeeId}/leave-requests/{requestId}/cancellation
+    - method: POST
+      path: /leave-requests/{requestId}/approval
+    - method: GET
+      path: /managers/{managerId}/team-leave-requests
+    - method: GET
+      path: /reports/leave-utilization
