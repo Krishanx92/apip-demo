@@ -1,0 +1,286 @@
+openapi: 3.0.0
+info:
+  title: Leave Management API
+  version: 1.0.0
+  description: Simple API for employee leave balances, requests, and manager approvals.
+
+servers:
+  - url: https://api.company.com/leave-management/v1
+
+paths:
+  /employees/{employeeId}/leave-balances:
+    get:
+      tags: [Leave Balances]
+      summary: List leave balances for an employee
+      operationId: listLeaveBalances
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Leave balances returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaveBalance'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /employees/{employeeId}/leave-requests:
+    get:
+      tags: [Leave Requests]
+      summary: List leave requests for an employee
+      operationId: listLeaveRequests
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/LeaveStatus'
+      responses:
+        '200':
+          description: Leave requests returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaveRequest'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+
+    post:
+      tags: [Leave Requests]
+      summary: Submit a leave request
+      operationId: createLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeaveRequest'
+      responses:
+        '201':
+          description: Leave request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+
+  /employees/{employeeId}/leave-requests/{requestId}:
+    get:
+      tags: [Leave Requests]
+      summary: Get a leave request
+      operationId: getLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Leave request returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+
+  /employees/{employeeId}/leave-requests/{requestId}/decision:
+    post:
+      tags: [Leave Approvals]
+      summary: Approve or reject a leave request
+      operationId: decideLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveDecision'
+      responses:
+        '200':
+          description: Leave request updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+
+  /employees/{employeeId}/leave-requests/{requestId}/cancel:
+    post:
+      tags: [Leave Requests]
+      summary: Cancel a pending leave request
+      operationId: cancelLeaveRequest
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Leave request cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+
+components:
+  parameters:
+    EmployeeId:
+      name: employeeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    LeaveBalance:
+      type: object
+      required: [leaveType, totalDays, usedDays, remainingDays]
+      properties:
+        leaveType:
+          type: string
+          example: Vacation
+        totalDays:
+          type: number
+          example: 20
+        usedDays:
+          type: number
+          example: 5
+        remainingDays:
+          type: number
+          example: 15
+
+    LeaveRequest:
+      type: object
+      required: [id, employeeId, leaveType, startDate, endDate, days, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        leaveType:
+          type: string
+          example: Vacation
+        startDate:
+          type: string
+          format: date
+          example: '2026-06-10'
+        endDate:
+          type: string
+          format: date
+          example: '2026-06-14'
+        days:
+          type: number
+          example: 5
+        reason:
+          type: string
+          example: Family trip
+        status:
+          $ref: '#/components/schemas/LeaveStatus'
+        managerComment:
+          type: string
+
+    CreateLeaveRequest:
+      type: object
+      required: [leaveType, startDate, endDate]
+      properties:
+        leaveType:
+          type: string
+          example: Sick Leave
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 500
+
+    LeaveDecision:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        comment:
+          type: string
+          maxLength: 500
+
+    LeaveStatus:
+      type: string
+      enum: [pending, approved, rejected, cancelled]
+
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: Request could not be completed
+
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Leave Balances
+  - name: Leave Requests
+  - name: Leave Approvals
