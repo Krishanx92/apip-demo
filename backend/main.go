@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -68,6 +67,7 @@ func main() {
 	s := &store{requests: sampleRequests()}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /", home)
 	mux.HandleFunc("GET /health", health)
 	mux.HandleFunc("GET /leave-types", listLeaveTypes)
 	mux.HandleFunc("GET /employees/{employeeId}/leave-balances", listLeaveBalances)
@@ -80,12 +80,19 @@ func main() {
 	mux.HandleFunc("GET /reports/leave-utilization", leaveUtilizationReport)
 
 	handler := withOptionalContext("/leave-management/v1.0", withJSONHeaders(mux))
-	addr := ":" + env("PORT", "8088")
+	addr := ":8080"
 
 	log.Printf("leave-management backend listening on %s", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func home(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{
+		"name":   "leave-management-backend",
+		"status": "running",
+	})
 }
 
 func withJSONHeaders(next http.Handler) http.Handler {
@@ -342,11 +349,4 @@ func sampleRequests() map[string]leaveRequest {
 			UpdatedAt:      "2026-04-10T10:00:00Z",
 		},
 	}
-}
-
-func env(name, fallback string) string {
-	if value := os.Getenv(name); value != "" {
-		return value
-	}
-	return fallback
 }

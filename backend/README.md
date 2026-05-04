@@ -8,11 +8,11 @@ Run it:
 go run .
 ```
 
-The server listens on `http://localhost:8088` by default. Override with `PORT` if needed.
+The server listens on `http://localhost:8080`.
 
 Example:
 
 ```bash
-curl http://localhost:8088/leave-types
-curl http://localhost:8088/employees/emp-100/leave-requests
+curl http://localhost:8080/leave-types
+curl http://localhost:8080/employees/emp-100/leave-requests
 ```
