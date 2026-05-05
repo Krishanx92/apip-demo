@@ -1,0 +1,47 @@
+apiVersion: gateway.api-platform.wso2.com/v1alpha1
+kind: RestApi
+metadata:
+  name: leave-management-api-v1.0
+spec:
+  displayName: Leave-Management-API
+  version: v1.0
+  context: /leave-management/$version
+  upstream:
+    main:
+      url: https://210ed30d-7e4c-40fa-9bf2-1d8389724908-prod.e1-us-east-azure.choreoapis.dev/dwlo/backend/v1.0
+  policies:
+    - name: set-headers
+      version: v1
+      params:
+        request:
+          headers:
+            - name: x-wso2-apip-gateway-version
+              value: v1.0.0
+        response:
+          headers:
+            - name: x-environment
+              value: development
+    - name: api-key-auth
+      version: v1
+      params:
+        key: API-Key
+        in: header
+  operations:
+    - method: GET
+      path: /leave-types
+    - method: GET
+      path: /employees/{employeeId}/leave-balances
+    - method: GET
+      path: /employees/{employeeId}/leave-requests
+    - method: POST
+      path: /employees/{employeeId}/leave-requests
+    - method: GET
+      path: /employees/{employeeId}/leave-requests/{requestId}
+    - method: POST
+      path: /employees/{employeeId}/leave-requests/{requestId}/cancellation
+    - method: POST
+      path: /leave-requests/{requestId}/approval
+    - method: GET
+      path: /managers/{managerId}/team-leave-requests
+    - method: GET
+      path: /reports/leave-utilization
